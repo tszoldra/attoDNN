@@ -1,7 +1,7 @@
 import os.path
 import numpy as np
-from preprocess import normalize, get_spacing
-from data_generator import DataGenerator
+from .preprocess import normalize, get_spacing
+from .data_generator import DataGenerator
 
 from functools import partial
 
@@ -41,11 +41,12 @@ class AttoDataset:
         return fd
 
 
-    def preprocess(self, preprocessor, feature_name):
+    def preprocess(self, preprocessor, feature_name, delete_NPZ=False):
         self.X = preprocessor(self.NPZ['PDFs'])
         self.y = self.NPZ['labels'][:, self.fd[feature_name]:self.fd[feature_name]+1]
         self.preprocessed = True
-        del self.PDFs, self.labels, self.grid, self.NPZ
+        if delete_NPZ:
+            del self.PDFs, self.labels, self.grid, self.NPZ
         pass
 
 
@@ -59,7 +60,7 @@ class AttoDataset:
     def get_sample_closest_to(self, y_0):
         if self.preprocessed:
             idx = np.argmin(np.abs(self.y.flatten() - y_0))
-            return self.X[idx[0]], self.y[idx[0]]
+            return self.X[idx], self.y[idx], idx
         else:
             raise RuntimeError('You must preprocess the data first.')
 

@@ -2,11 +2,12 @@ import os
 
 import numpy as np
 import tensorflow as tf
-from attodataset import AttoDataset
+from .attodataset import AttoDataset
 from typing import List
-from train_utils import MAE
+from .train_utils import MAE
 import warnings
 from matplotlib import pyplot as plt
+from time import time
 
 
 def parse_model_filename(fn):
@@ -25,7 +26,7 @@ def evaluation_grid(models_filenames: List[str], AttoDatasetsList: List[AttoData
     unique_model_names = []
     unique_train_dataset_names = []
 
-    for fn in models_filenames:
+    for i, fn in enumerate(models_filenames):
         model = tf.keras.models.load_model(fn)
         train_dataset_name, model_name, model_number = parse_model_filename(fn)
 
@@ -38,11 +39,15 @@ def evaluation_grid(models_filenames: List[str], AttoDatasetsList: List[AttoData
         if train_dataset_name not in unique_train_dataset_names:
             unique_train_dataset_names.append(train_dataset_name)
 
-        for dataset in AttoDatasetsList:
+        for j, dataset in enumerate(AttoDatasetsList):
+            current = i*len(AttoDatasetsList) + j
+            total = len(AttoDatasetsList) * len(models_filenames)
+            print(f'{current}/{total} {train_dataset_name} {model_name} {model_number} {dataset.basename}')
+
             if dataset.basename not in grid[train_dataset_name][model_name].keys():
                 grid[train_dataset_name][model_name][dataset.basename] = {}
 
-            if dataset.data_generator_test is None or use_data_generator:
+            if dataset.data_generator_test is None or not use_data_generator:
                 X, y_true = dataset.get_Xy()
                 y_pred = model.predict(X, batch_size=batch_size)
             else:
@@ -74,7 +79,7 @@ def plot_evaluation_grid(grid: dict, model_names, train_dataset_names, eval_data
     if color_list is None:
         color_list = plt.rcParams['axes.prop_cycle'].by_key()['color']
     if marker_list is None:
-        marker_list = ['o','s','v','D','^','<','>']
+        marker_list = ['o', 's', 'v', 'D', '^', '<', '>']
 
     for i, train_dataset_name in enumerate(train_dataset_names):
         axs[i][0].set_ylabel(parse_dataset_name_fun(train_dataset_name).replace('_', '\n'), fontsize=12)
@@ -103,7 +108,8 @@ def plot_evaluation_grid(grid: dict, model_names, train_dataset_names, eval_data
                                     y_pred_std = np.std(y_pred_all, axis=0)
                                     y_pred = np.mean(y_pred_all, axis=0)
                             else:
-                                y_pred = result_model[plot_single_model_number]
+                                y_pred = result_model[plot_single_model_number]['y_pred']
+                                n += 1
 
                             if max_points_per_dataset:
                                 if y_pred.shape[0] > max_points_per_dataset:
@@ -112,8 +118,8 @@ def plot_evaluation_grid(grid: dict, model_names, train_dataset_names, eval_data
                                     y_pred = y_pred[choice]
                                     y_pred_std = y_pred_std[choice]
 
-                            axs[i][j].errorbar(y_true, y_pred, yerr=y_pred_std,
-                                               linestyle=None, marker=marker_list[k%len(marker_list)],
+                            axs[i][j].errorbar(y_true[:, 0], y_pred[:, 0], yerr=y_pred_std[:, 0],
+                                               linestyle='none', marker=marker_list[k%len(marker_list)],
                                                markerfacecolor='none',
                                                label=parse_dataset_name_fun(eval_dataset_name)
                                                )
@@ -128,7 +134,7 @@ def plot_evaluation_grid(grid: dict, model_names, train_dataset_names, eval_data
 
     handles, labels = plt.gca().get_legend_handles_labels()
     by_label = dict(zip(labels, handles))
-    fig.legend(by_label.values(), by_label.keys(), loc='upper right')
+    fig.legend(by_label.values(), by_label.keys(), bbox_to_anchor=(1,1))
     plt.subplots_adjust(wspace=0, hspace=0)
     fig.suptitle(suptitle)
 

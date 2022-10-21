@@ -8,18 +8,12 @@ from tf_keras_vis.saliency import Saliency
 from tf_keras_vis.utils import normalize as normalize_img
 from tf_keras_vis.gradcam import Gradcam
 from tf_keras_vis.gradcam_plus_plus import GradcamPlusPlus
-from tf_keras_vis.scorecam import Scorecam # solution: https://github.com/keisen/tf-keras-vis/issues/87 - change file ~/usr_local_bin/anaconda3/envs/tf-keras-vis/lib/python3.10/site-packages/tf_keras_vis/utils/model_modifiers.py
-
-
-def turn_off_GPU():
-    # turn off GPU
-    os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
-    warnings.warn('Disabling GPU support for explainability algorithms.')
+from tf_keras_vis.scorecam import Scorecam  # solution: https://github.com/keisen/tf-keras-vis/issues/87 - change file ~/usr_local_bin/anaconda3/envs/tf-keras-vis/lib/python3.10/site-packages/tf_keras_vis/utils/model_modifiers.py
 
 
 def plot_explain(X, y, model, analyzer_name: str, score_function, subplot_kwargs=dict(), analyzer_kwargs=dict(),
                  cmap='jet', alpha=0.5):
-    fig, axs = plt.subplots(X.shape[0], **subplot_kwargs)
+    fig, axs = plt.subplots(nrows=1, ncols=X.shape[0], **subplot_kwargs)
 
     y_pred = model.predict(X)
 
@@ -37,7 +31,7 @@ def plot_explain(X, y, model, analyzer_name: str, score_function, subplot_kwargs
         ax.imshow(img)
         ax.imshow(img_explain, cmap=cmap, alpha=alpha)
         ax.axis('off')
-        ax.set_title(f'true: {label_true: .3f}, pred: {label_pred: .3f}', fontsize=16)
+        ax.set_title(f'true: {label_true[0]: .3f}, pred: {label_pred[0]: .3f}', fontsize=16)
 
     return fig, axs
 

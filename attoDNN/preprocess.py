@@ -17,7 +17,7 @@ def preprocess_1(PDFs, normalize_X_fun=lambda x: x, threshold=1e-10, downsample_
     :param threshold: Lower bound for the normalized values.
     :param downsample_1: Take every ``downsample_1`` entry across axis 1.
     :param downsample_2: Take every ``downsample_2`` entry across axis 2.
-    :return: PDFs: of shape (PDFs.shape[0], 299, 299, 3).
+    :return: function that acts on PDFs and returns shape (PDFs.shape[0], 299, 299, 3).
     """
     X = PDFs[:, ::downsample_1, ::downsample_2]
 
@@ -29,6 +29,7 @@ def preprocess_1(PDFs, normalize_X_fun=lambda x: x, threshold=1e-10, downsample_
     X = np.array([resize(img, (299, 299)) for img in X])
 
     return np.repeat(np.expand_dims(X, -1), 3, axis=-1)
+
 
 
 def preprocess_2(PDFs, threshold=1e-10, downsample_1=1, downsample_2=1):
@@ -47,7 +48,7 @@ def preprocess_2(PDFs, threshold=1e-10, downsample_1=1, downsample_2=1):
     :param threshold: Lower bound for the signal in units of the maximal signal.
     :param downsample_1: Take every ``downsample_1`` entry across axis 1.
     :param downsample_2: Take every ``downsample_2`` entry across axis 2.
-    :return: PDFs: of shape (PDFs.shape[0], 299, 299, 3).
+    :return: function that acts on PDFs and returns shape (PDFs.shape[0], 299, 299, 3).
     """
     X = PDFs[:, ::downsample_1, ::downsample_2]
 
@@ -64,7 +65,7 @@ def preprocess_2(PDFs, threshold=1e-10, downsample_1=1, downsample_2=1):
 
 
 def remove_region_around_origin(X, removal_size=(0.1, 0.2)):
-    idxs1_min = int(X.shape[1] / 2 * (1 - removal_size[0] /2))
+    idxs1_min = int(X.shape[1] / 2 * (1 - removal_size[0] / 2))
     idxs1_max = int(X.shape[1] / 2 * (1 + removal_size[0] / 2))
     idxs2_min = 0
     idxs2_max = int(X.shape[2] * removal_size[1])

@@ -1,9 +1,15 @@
 from tensorflow import keras
+import tensorflow as tf
+
+
+def list_GPUs():
+    return tf.config.list_physical_devices('GPU')
 
 
 def deepCNN_pretrained(input_shape, output_dim=1,
                        pretrained_model=keras.applications.Xception,
-                       dropout_rate=0., weights='imagenet'):
+                       dropout_rate=0., weights='imagenet', dense_layers=None,
+                       global_avg_pooling_2d=True):
     """
     Model with a pretrained part with the last layer removed
     and a GlobalAveragePooling2D, Dropout and a single linear dense layer applied.
@@ -16,6 +22,9 @@ def deepCNN_pretrained(input_shape, output_dim=1,
         with a frequency of rate at each step during training time, which helps prevent overfitting.
     :param weights: Either ``imagenet`` for a model pretrained on imagenet dataset or None for \
         random initialization. For random initialization, the base_model becomes trainable.
+    :param dense_layers: Either None for a single output layer or list [n1, n2,...] where \
+        n1, n2, ... are dense layers dimensions.
+    :param global_avg_pooling_2d: Whether to perform global average pooling before applying the dense layer(s).
 
     :returns: (model, base_model) tuple where ``model`` is the whole model and `base_model` is the pretrained part.
         Model needs to be compiled.
@@ -34,13 +43,21 @@ def deepCNN_pretrained(input_shape, output_dim=1,
 
     x = base_model.output
     # x = base_model(x, training=False)  # TODO Important for batchNormalization layer; see https://keras.io/guides/transfer_learning/
-    x = keras.layers.GlobalAveragePooling2D()(x)
+    if global_avg_pooling_2d:
+        x = keras.layers.GlobalAveragePooling2D()(x)
     x = keras.layers.Dropout(dropout_rate)(x)
-    outputs = keras.layers.Dense(output_dim, activation='linear')(x)
+    if dense_layers is None:
+        outputs = keras.layers.Dense(output_dim, activation='linear')(x)
+    else:
+        outputs = keras.layers.Dense(dense_layers[0], activation='relu')(x)
+        for n in dense_layers[1:]:
+            outputs = keras.layers.Dense(n, activation='relu')(outputs)
+        outputs = keras.layers.Dense(output_dim, activation='linear')(outputs)
 
     model = keras.models.Model(base_model.inputs, outputs)
 
     return model, base_model
+
 
 
 def deepCNN1(input_shape, output_dim):
