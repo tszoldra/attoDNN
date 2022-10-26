@@ -2,7 +2,7 @@ import os
 import numpy as np
 from functools import partial, lru_cache
 from scipy import stats, integrate, interpolate
-from attodataset import AttoDataset
+from attoDNN.attodataset import AttoDataset
 
 
 @lru_cache(maxsize=2048)
@@ -75,9 +75,11 @@ def dataset_to_CEP_averaged(ds: AttoDataset, out_filename_npz: str):
     unique_labels_without_CEP, idxs = np.unique(ds.labels[:, not_CEP_idxs], return_index=True, axis=0)
 
 
-    PDFs_CEP_avg = np.zeros((idxs.shape[0], ds.PDFs.shape[1:]))
+    PDFs_CEP_avg = np.zeros((idxs.shape[0], *ds.PDFs.shape[1:]))
 
-    for i in idxs:
+    for i, idx in enumerate(idxs):
+        if i % 100 == 0:
+            print(f'{i} out of {len(idxs)}')
         label = ds.labels[i]
         PDFs_CEP_avg[i] = CEP_averaging(label, ds.PDFs, ds.labels, ds.fd)
 

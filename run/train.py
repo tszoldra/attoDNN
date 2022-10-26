@@ -148,7 +148,7 @@ if __name__ == "__main__":
 
     for model_number in range(n_models):
         for ds in datasets:
-            ds.preprocess(preprocessor, feature)
+            ds.preprocess(preprocessor, feature, delete_NPZ=True)
 
             X_train, X_val, X_test, y_train, y_val, y_test = train_test_split(*ds.get_Xy())
 

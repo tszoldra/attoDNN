@@ -222,7 +222,7 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
 
     start = time()
 
-    history = model.fit(dg_train, validation_data=dg_val, epochs=epochs, callbacks=cb)
+    history = model.fit(dg_train, validation_data=dg_val, epochs=epochs, callbacks=cb, verbose=2)
     if checkpoint:
         model.load_weights(checkpoint_filename)
     
@@ -236,7 +236,7 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
         base_model.trainable = True
         model.compile(optimizer=optimizer_fine_tune(), loss=loss())
 
-        history_fine_tuning = model.fit(dg_train, validation_data=dg_val, epochs=epochs, callbacks=cb)
+        history_fine_tuning = model.fit(dg_train, validation_data=dg_val, epochs=epochs, callbacks=cb, verbose=2)
 
         if checkpoint:
             model.load_weights(checkpoint_filename)
