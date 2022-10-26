@@ -225,7 +225,10 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
     history = model.fit(dg_train, validation_data=dg_val, epochs=epochs, callbacks=cb)
     if checkpoint:
         model.load_weights(checkpoint_filename)
-
+    
+    train_loss = history.history['loss'][-1]
+    val_loss = history.history['val_loss'][-1]
+    
     # fine-tune the pretrained part if it exists
     if base_model and fine_tune:
         if optimizer_fine_tune is None:
@@ -237,13 +240,15 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
 
         if checkpoint:
             model.load_weights(checkpoint_filename)
+        
+        train_loss = history_fine_tuning.history['loss'][-1]
+        val_loss = history_fine_tuning.history['val_loss'][-1]
+        
 
     end = time()
     
     model.save(model_save_filename)
 
-    train_loss = history.history['loss'][-1]
-    val_loss = history.history['val_loss'][-1]
     test_loss = model.evaluate(dg_test)
 
     with open(log_filename, 'a') as logs:
