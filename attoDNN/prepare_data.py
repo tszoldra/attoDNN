@@ -56,7 +56,6 @@ def dataset_to_focal_averaged(ds: AttoDataset, out_filename_npz: str, weight_fun
 
 
 def CEP_averaging(label, PDFs, labels, feature_dict):
-    #TODO test
     CEP_idx = feature_dict['CEP']
     not_CEP_idxs = np.where(np.arange(len(label)) != CEP_idx)
 
@@ -80,7 +79,7 @@ def dataset_to_CEP_averaged(ds: AttoDataset, out_filename_npz: str):
     for i, idx in enumerate(idxs):
         if i % 100 == 0:
             print(f'{i} out of {len(idxs)}')
-        label = ds.labels[i]
+        label = ds.labels[idx]
         PDFs_CEP_avg[i] = CEP_averaging(label, ds.PDFs, ds.labels, ds.fd)
 
     np.savez(out_filename_npz, PDFs=PDFs_CEP_avg, labels=ds.labels[idxs], grid=ds.grid)

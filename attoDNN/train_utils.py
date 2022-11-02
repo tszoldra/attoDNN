@@ -147,7 +147,7 @@ def regression_train_test_split_3(X, y, val_size=0.1, test_size=0.1, random_stat
     test_idxs = all_idxs[cond_test]
     training_idxs = all_idxs[~cond_test]
 
-    training_idxs, val_idxs = train_test_split(test_idxs, test_size=val_size * (1 - test_size),
+    training_idxs, val_idxs = train_test_split(training_idxs, test_size=val_size * (1 - test_size),
                                                random_state=random_state)
 
     X_train = X[training_idxs]

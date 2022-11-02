@@ -1,7 +1,7 @@
 from tensorflow import keras
 import tensorflow as tf
 import numpy as np
-from scipy.stats import truncnorm
+from scipy.stats import truncnorm, poisson
 
 
 class DataGenerator_tf(keras.utils.Sequence):
@@ -130,6 +130,27 @@ def random_background_noise_for_preprocess_2_tf(X, threshold, noise_level=1e-4):
     return X
 
 
+def random_poisson_noise_for_preprocess_2_tf(X, threshold, max_counts_per_pixel=1e4):
+    """
+    Adds Poisson noise to the data fed through preprocess_2 (already in the log space and range [-1, 1]).
+    :param X: pictures in range(-1, 1)
+    :param threshold: threshold used in preprocess_2.
+    :param max_counts_per_pixel: maximal count of photoelectrons per pixel.
+    :return: noisy X
+    """
+    threshold = tf.constant(threshold, dtype=X.dtype)
+    mcpp = tf.constant(max_counts_per_pixel, dtype=X.dtype)
+    X = tf.math.pow(tf.constant(10., dtype=X.dtype),
+                    tf.constant(0.5, dtype=X.dtype) * tf_log10(threshold) * (
+                            tf.constant(1., shape=X.shape, dtype=X.dtype) - X))
+    X = (tf.random.poisson([1], X*mcpp, dtype=X.dtype)[0] + tf.constant(1., dtype=X.dtype)) / mcpp
+    X = tf_log10(X)
+    X = X + (-tf_log10(threshold) / tf.constant(2., dtype=X.dtype))
+    X = X / (-tf_log10(threshold) / tf.constant(2., dtype=X.dtype))
+
+    return X
+
+
 class DataGenerator(keras.utils.Sequence):
     """Generates data for Keras model with numpy array operations."""
 
@@ -225,3 +246,5 @@ def random_background_noise_for_preprocess_2(X, threshold, noise_level=1e-4):
     X = X / (-np.log10(threshold) / 2.)
 
     return X
+
+
