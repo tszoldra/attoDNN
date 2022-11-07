@@ -195,6 +195,7 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
                              fine_tune=True,
                              optimizer_fine_tune=None,
                              kernel_regularizer=None,
+                             epochs_fine_tune=None,
                              ):
 
     model, base_model = model_fun(dg_train.input_dim, dg_train.output_dim)
@@ -236,7 +237,9 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
         base_model.trainable = True
         model.compile(optimizer=optimizer_fine_tune(), loss=loss())
 
-        history_fine_tuning = model.fit(dg_train, validation_data=dg_val, epochs=epochs, callbacks=cb, verbose=2)
+        if epochs_fine_tune is None:
+            epochs_fine_tune = epochs
+        history_fine_tuning = model.fit(dg_train, validation_data=dg_val, epochs=epochs_fine_tune, callbacks=cb, verbose=2)
 
         if checkpoint:
             model.load_weights(checkpoint_filename)

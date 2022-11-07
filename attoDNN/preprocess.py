@@ -84,3 +84,18 @@ def normalize(PDFs, delta_z, delta_x):
     norm = np.sum(np.sum(PDFs, axis=2), axis=1) * delta_z * delta_x
 
     return PDFs / norm.reshape(PDFs.shape[0], 1, 1)
+
+
+def poisson_noise_for_preprocess_2(X, threshold, max_counts_per_pixel):
+    X = np.power(10., 0.5 * np.log10(threshold) * (1 - X))  # X from 0 to 1 in linear scale
+    X = (np.random.poisson(lam=X * max_counts_per_pixel, size=X.shape) + 1.) / max_counts_per_pixel
+    X = np.log10(X)
+    X = X + (-np.log10(threshold) / 2.)
+    X = X / (-np.log10(threshold) / 2.)
+    return X
+
+
+def detector_saturation(X, level=0.5):
+    X = np.clip(X, -1., level)
+    X = X + 1. - level
+    return X

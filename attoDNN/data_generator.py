@@ -86,6 +86,16 @@ def random_brightness_tf(X, brightness_max_delta=0.2):
     return X
 
 
+def random_detector_saturation_tf(X, saturation_level_min=-0.5, saturation_level_max=1.0):
+    sl = tf.random.uniform(shape=[1], minval=saturation_level_min,
+                           maxval=saturation_level_max, dtype=X.dtype)[0]
+
+    X = tf.clip_by_value(X, clip_value_min=tf.constant(-1., dtype=X.dtype),
+                         clip_value_max=sl)
+    X = X + tf.constant(1., dtype=X.dtype) - sl
+    return X
+
+
 def tf_log10(x):
     numerator = tf.math.log(x)
     denominator = tf.math.log(tf.constant(10., dtype=numerator.dtype))
