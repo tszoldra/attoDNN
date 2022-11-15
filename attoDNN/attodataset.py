@@ -42,8 +42,8 @@ class AttoDataset:
 
 
     def preprocess(self, preprocessor, feature_name, delete_NPZ=False):
-        self.X = preprocessor(self.NPZ['PDFs'])
-        self.y = self.NPZ['labels'][:, self.fd[feature_name]:self.fd[feature_name]+1]
+        self.X = preprocessor(self.PDFs)
+        self.y = self.labels[:, self.fd[feature_name]:self.fd[feature_name]+1]
         self.preprocessed = True
         if delete_NPZ:
             del self.PDFs, self.labels, self.grid, self.NPZ

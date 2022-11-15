@@ -6,6 +6,10 @@ from sklearn.model_selection import train_test_split
 import tensorflow.keras.backend as K
 from tensorflow.keras.optimizers import Optimizer
 import tensorflow as tf
+import argparse
+import io
+
+import matplotlib.pyplot as plt
 
 
 def MAE(y_true, y_pred):
@@ -113,6 +117,7 @@ def regression_train_test_split_2(X, y, val_size=0.1, test_size=0.1, random_stat
     :returns: (X_train, X_val, X_test, y_train, y_val, y_test)
 
     """
+
     X_train, X_test, y_train, y_test = train_test_split(X, y,
                                                         test_size=val_size + test_size,
                                                         random_state=random_state)
@@ -185,6 +190,107 @@ def dict_to_npz_dict(d):
     return d1
 
 
+# class ExtraValidation(keras.callbacks.Callback):
+#     """Log evaluation metrics of an extra validation set. This callback
+#     is useful for model training scenarios where multiple validation sets
+#     are used for evaluation (as Keras by default, provides functionality for
+#     evaluating on a single validation set only).
+#     The evaluation metrics are also logged to TensorBoard.
+#     Adapted from https://github.com/tanzhenyu/image_augmentation/blob/master/image_augmentation/callbacks/extra_eval.py
+#     Args:
+#         validation_data: A (X, y) dataset used to evaluate the
+#             model, essentially an extra validation dataset.
+#         validation_freq: Number of epochs to wait before performing
+#             subsequent evaluations.
+#     """
+#     def __init__(self, X_val, y_val, validation_freq=1):
+#         super(ExtraValidation, self).__init__()
+#
+#         self.X_val = X_val
+#         self.y_val = y_val
+#         self.validation_freq = validation_freq
+#
+#     def on_epoch_end(self, epoch, logs=None):
+#         # evaluate at an interval of `validation_freq` epochs
+#         if (epoch + 1) % self.validation_freq == 0:
+#             # TODO: fix `model.evaluate` memory leak on TPU
+#             # gather the evaluation metrics
+#             scores = self.model.evaluate(self.X_val, self.y_val, verbose=2)
+
+class ExtraValidation(keras.callbacks.Callback):
+    """Log evaluation metrics of an extra validation set. This callback
+    is useful for model training scenarios where multiple validation sets
+    are used for evaluation (as Keras by default, provides functionality for
+    evaluating on a single validation set only).
+    The evaluation metrics are also logged to TensorBoard.
+    Taken from https://github.com/tanzhenyu/image_augmentation/blob/master/image_augmentation/callbacks/extra_eval.py
+    Args:
+        validation_data: A tf.data.Dataset pipeline used to evaluate the
+            model, essentially an extra validation dataset.
+        tensorboard_path: Path to the TensorBoard logging directory.
+        validation_freq: Number of epochs to wait before performing
+            subsequent evaluations.
+    """
+    def __init__(self, X_val, y_val, tensorboard_path, id: str, validation_freq=1, plot=True):
+        super(ExtraValidation, self).__init__()
+
+        self.X_val = X_val
+        self.y_val = y_val
+        self.id = id  # identifier of the validation dataset for tensorboard
+        self.tensorboard_path = tensorboard_path
+
+        self.tensorboard_writer = tf.summary.create_file_writer(self.tensorboard_path)
+
+        self.validation_freq = validation_freq
+
+    def on_epoch_end(self, epoch, logs=None):
+        # evaluate at an interval of `validation_freq` epochs
+        if (epoch + 1) % self.validation_freq == 0:
+            # gather metric names form model
+            metric_names = ['{}'.format('epoch', metric.name)
+                            for metric in self.model.metrics]
+
+            # TODO: fix `model.evaluate` memory leak on TPU
+            # gather the evaluation metrics
+            scores = self.model.evaluate(self.X_val, self.y_val, verbose=2)
+            y_pred = self.model.predict(self.X_val, verbose=0)
+
+            fig, ax = plt.subplots(figsize=(6, 6))
+            ax.scatter(np.array(self.y_val)[:, 0], np.array(y_pred)[:, 0])
+            ax.plot(np.linspace(0, 1, 100), np.linspace(0, 1, 100), '-k')
+            ax.set_xlabel('true label')
+            ax.set_ylabel('predicted label')
+            ax.set_xlim(0, 1)
+            ax.set_ylim(0, 1)
+
+            img = plot_to_image(fig)
+
+            # gather evaluation metrics to TensorBoard
+            with self.tensorboard_writer.as_default():
+                #for metric_name, score in zip(metric_names, [scores]):
+                tf.summary.scalar(metric_names[0] + " extra validation " + self.id, scores, step=epoch)
+                tf.summary.image(f'Correlation plot {self.id}', img, step=epoch)
+
+
+def plot_to_image(figure):
+    """Converts the matplotlib plot specified by 'figure' to a PNG image and
+    returns it. The supplied figure is closed and inaccessible after this call."""
+    # Save the plot to a PNG in memory.
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    # Closing the figure prevents it from being displayed directly inside
+    # the notebook.
+    plt.close(figure)
+    buf.seek(0)
+    # Convert PNG buffer to TF image
+    image = tf.image.decode_png(buf.getvalue(), channels=4)
+    # Add the batch dimension
+    image = tf.expand_dims(image, 0)
+    return image
+
+
+
+
 def model_compile_train_save(dg_train, dg_val, dg_test,
                              model_fun, epochs, optimizer,
                              loss, callbacks,
@@ -196,6 +302,7 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
                              optimizer_fine_tune=None,
                              kernel_regularizer=None,
                              epochs_fine_tune=None,
+                             callbacks_fine_tune=None,
                              ):
 
     model, base_model = model_fun(dg_train.input_dim, dg_train.output_dim)
@@ -239,7 +346,13 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
 
         if epochs_fine_tune is None:
             epochs_fine_tune = epochs
-        history_fine_tuning = model.fit(dg_train, validation_data=dg_val, epochs=epochs_fine_tune, callbacks=cb, verbose=2)
+        if callbacks_fine_tune is None:
+            cb_fine_tune = cb
+        else:
+            cb_fine_tune = callbacks_fine_tune()
+
+        history_fine_tuning = model.fit(dg_train, validation_data=dg_val, epochs=epochs_fine_tune,
+                                        callbacks=cb_fine_tune, verbose=2)
 
         if checkpoint:
             model.load_weights(checkpoint_filename)
@@ -252,7 +365,7 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
     
     model.save(model_save_filename)
 
-    test_loss = model.evaluate(dg_test)
+    test_loss = model.evaluate(dg_test, verbose=2)
 
     with open(log_filename, 'a') as logs:
         if os.stat(log_filename).st_size == 0:
@@ -268,3 +381,31 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
     
     return model
 
+
+def train_parser():
+    parser = argparse.ArgumentParser(description='Train a model on dataset with given hyperparameters')
+    myargs = [
+        ('model_save_folder', str, 'Where to save models and logs.', '.'),
+        ('dataset_path', str, 'Training dataset path.',
+         '/nfs/amd0/home/c8888/attosecond_ML/data_cleaned/cartesian_0/QProp_unnormalized/QProp_Ar_LongPulse_CEP2.npz'),
+        ('random_state', int, 'Random state for train-test split etc.', 1234),
+        ('n_models', int, 'Total number of instances of a model to train.', 1),
+        ('model_name', str, 'Model name.', 'VGG16'),
+        ('checkpoint_filename', str, 'Path to checkpoint file.', '/home/c8888/scratch/checkpoint/checkpoint'),
+        ('saturation_level_min', float, 'Minimal (worst-case) detector saturation level, in the range (-1, 1).', -0.5),
+        ('saturation_level_max', float, 'Maximal (best-case) detector saturation level, in the range (-1, 1).', 1.),
+        ('batch_size', int, 'Batch size. Should be chosen depending on available memory and model size.', 32),
+
+    ]
+
+    for argname, argtype, arghelp, argdefault in myargs:
+        parser.add_argument(argname, type=argtype, help=arghelp, default=argdefault)
+
+    parser.add_argument('--dense_layers', type=int, help='List of sizes of dense layers applied at the end of the network. If not given,'
+                                 ' a single layer with linear activation is applied.',
+                        default=None,
+                        nargs='+')
+    parser.add_argument('--tensorboard_path', type=str, help='Path to save tensorboard logs.',
+                        default='./tensorboard')
+
+    return parser

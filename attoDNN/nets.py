@@ -8,43 +8,61 @@ def list_GPUs():
 
 def deepCNN_pretrained(input_shape, output_dim=1,
                        pretrained_model=keras.applications.Xception,
-                       dropout_rate=0., weights='imagenet', dense_layers=None,
-                       global_avg_pooling_2d=True):
+                       dropout_rate=0., weights='imagenet',
+                       pooling='avg',
+                       dense_layers=None):
     """
-    Model with a pretrained part with the last layer removed
-    and a GlobalAveragePooling2D, Dropout and a single linear dense layer applied.
+    Model with a pretrained part, pooling, Dropout and dense layers.
 
     Arguments:
-    :param input_shape: Tuple with ``(image_width, image_height, n_channels)``.
+    :param input_shape: Tuple with ``(image_width, image_height, n_channels)``. If n_channels=1,
+        channels are repeated 3 times.
     :param output_dim: Dimensionality of the output. For prediction of a scalar, set to 1.
     :param pretrained_model: One of the ``tf.keras.applications`` classes.
     :param dropout_rate: Float between 0 and 1. The Dropout layer randomly sets input units to 0
         with a frequency of rate at each step during training time, which helps prevent overfitting.
     :param weights: Either ``imagenet`` for a model pretrained on imagenet dataset or None for \
         random initialization. For random initialization, the base_model becomes trainable.
+    :param pooling: pooling applied after the pretrained part. Can be 'avg', 'max' or None.
     :param dense_layers: Either None for a single output layer or list [n1, n2,...] where \
         n1, n2, ... are dense layers dimensions.
-    :param global_avg_pooling_2d: Whether to perform global average pooling before applying the dense layer(s).
+
 
     :returns: (model, base_model) tuple where ``model`` is the whole model and `base_model` is the pretrained part.
         Model needs to be compiled.
     """
+    inputs = keras.Input(shape=input_shape)
 
-    base_model = pretrained_model(include_top=False,
-                                  input_shape=input_shape,
-                                  weights=weights)
+    if input_shape[2] == 1:
+        inputs = tf.repeat(inputs, 3, -1)
 
-    if weights is not None:
-        base_model.trainable = False
-    elif weights == 'imagenet':
+    if 'EfficientNetB' in str(pretrained_model):
+        inputs = tf.keras.layers.Rescaling(scale=127.5, offset=1)(inputs)  # inefficient workaround for
+                                                                   # EfficientNet V1 models
+    pretrained_model_kwargs = dict(input_tensor=inputs,
+                                  include_top=False,
+                                  weights=weights,
+                                  pooling=pooling)
+    if ('EfficientNetV2' in str(pretrained_model)) or ('ConvNeXt' in str(pretrained_model)):
+        pretrained_model_kwargs['include_preprocessing'] = False
+
+    base_model = pretrained_model(**pretrained_model_kwargs)
+
+    if weights is None:
         base_model.trainable = True
+    elif weights == 'imagenet':
+        base_model.trainable = False
     else:
         raise ValueError('Weights must be either "imagenet" or None.')
 
-    x = base_model.output
-    # x = base_model(x, training=False)  # TODO Important for batchNormalization layer; see https://keras.io/guides/transfer_learning/
-    if global_avg_pooling_2d:
-        x = keras.layers.GlobalAveragePooling2D()(x)
+    # un-freeze the BatchNorm layers
+    # https://datascience.stackexchange.com/questions/47966/over-fitting-in-transfer-learning-with-small-dataset
+    for layer in base_model.layers:
+        if "BatchNormalization" in layer.__class__.__name__:
+            layer.trainable = True
+    # x = base_model(x, training=False)  # Important for batchNormalization layer; here not desired.
+                                         # see https://keras.io/guides/transfer_learning/
+    x = base_model.output  # workaround for innvestigate - model cannot have one complicated layer but many simple layers!
     x = keras.layers.Dropout(dropout_rate)(x)
     if dense_layers is None:
         outputs = keras.layers.Dense(output_dim, activation='linear')(x)
@@ -54,7 +72,7 @@ def deepCNN_pretrained(input_shape, output_dim=1,
             outputs = keras.layers.Dense(n, activation='relu')(outputs)
         outputs = keras.layers.Dense(output_dim, activation='linear')(outputs)
 
-    model = keras.models.Model(base_model.inputs, outputs)
+    model = keras.models.Model(base_model.input, outputs)
 
     return model, base_model
 

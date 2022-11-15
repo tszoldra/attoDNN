@@ -18,7 +18,7 @@ class DataGenerator_tf(keras.utils.Sequence):
         :param batch_size: Batch size.
         :param shuffle: Whether to shuffle the original order of entries in X and y.
         """
-        self.X = tf.convert_to_tensor(X)
+        self.X = X
         self.n_samples = X.shape[0]
         self.input_dim = X.shape[1:]
         self.y = y

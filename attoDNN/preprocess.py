@@ -32,7 +32,7 @@ def preprocess_1(PDFs, normalize_X_fun=lambda x: x, threshold=1e-10, downsample_
 
 
 
-def preprocess_2(PDFs, threshold=1e-10, downsample_1=1, downsample_2=1):
+def preprocess_2(PDFs, threshold=1e-10, downsample_1=1, downsample_2=1, shape=(299, 299, 3)):
     """
     Preprocess PDFs:
         1. Take every ``downsample_1`` entry across axis 1 and every ``downsample_2`` entry across axis 2.
@@ -42,26 +42,37 @@ def preprocess_2(PDFs, threshold=1e-10, downsample_1=1, downsample_2=1):
         5. X = np.log10(X)
         6. X = X + (-np.log10(threshold) / 2)
         7. X = X / (-np.log10(threshold) / 2)
-        8. Resize to shape (PDFs.shape[0], 299, 299, 3) where channels are copied from one channel initially.
+        8. Resize to shape (PDFs.shape[0], 299, 299, nchannels) where channels are copied from one channel initially.
+    Modifies PDFs in-place for memory efficiency.
 
     :param PDFs: Pictures with probability distributions (in the linear scale).
     :param threshold: Lower bound for the signal in units of the maximal signal.
     :param downsample_1: Take every ``downsample_1`` entry across axis 1.
     :param downsample_2: Take every ``downsample_2`` entry across axis 2.
-    :return: function that acts on PDFs and returns shape (PDFs.shape[0], 299, 299, 3).
+    :param shape: Shape of the final picture. If more than one color channel, the values are repeated across channels.
+
+    :return: preprocessed PDFs of shape (PDFs.shape[0], *shape).
     """
-    X = PDFs[:, ::downsample_1, ::downsample_2]
+    X = PDFs[:, ::downsample_1, ::downsample_2].view()
+    X /= np.max(X, axis=(1, 2)).reshape((-1, 1, 1))
 
-    X = X / np.max(X, axis=(1, 2)).reshape((-1, 1, 1))
-    X[np.where(X < threshold)] = threshold
-    # in the comments we use value threshold=1e-6 for readability
-    X = np.log10(X)  # X in -6...0
-    X = X + (-np.log10(threshold) / 2)  # X in -3...3
-    X = X / (-np.log10(threshold) / 2)  # X in -1...1
+    def flat_for(a, f, batch_size=8192):  # for in-place modification of np.ndarray
+        a = a.reshape(-1)
+        for i in range(0, a.shape[0], batch_size):
+            a[i:i+batch_size] = f(a[i:i+batch_size])
+    #X[np.where(X < threshold)] = threshold
+    np.clip(X, threshold, None, out=X)
+    # in the comments we use value threshold=1e-6 for illustration
+    #X = np.log10(X)  # X in -6...0
+    #flat_for(X, np.log10, batch_size=8192)
+    np.log10(X, out=X)
+    X += (-np.log10(threshold) / 2)  # X in -3...3
+    X /= (-np.log10(threshold) / 2)  # X in -1...1
 
-    X = np.array([resize(img, (299, 299)) for img in X])
-
-    return np.repeat(np.expand_dims(X, -1), 3, axis=-1)
+    X_resized = np.empty((X.shape[0], *shape[:2]), dtype=X.dtype)
+    for i, img in enumerate(X):
+        X_resized[i] = resize(img, shape[:2])
+    return np.repeat(np.expand_dims(X_resized, -1), shape[2], axis=-1)
 
 
 def remove_region_around_origin(X, removal_size=(0.1, 0.2)):
