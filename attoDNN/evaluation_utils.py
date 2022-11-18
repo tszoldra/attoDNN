@@ -14,6 +14,9 @@ def parse_model_filename(fn):
     bn = os.path.basename(fn)
     train_dataset_name, model_name, model_number = bn.split('__')
     model_number = int(model_number[:-3])
+    # if '.npz_' in train_dataset_name:
+    #    train_dataset_name = train_dataset_name[:train_dataset_name.index(".npz_")+4]
+
     return train_dataset_name, model_name, model_number
 
 

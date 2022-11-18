@@ -256,7 +256,10 @@ class ExtraValidation(keras.callbacks.Callback):
             y_pred = self.model.predict(self.X_val, verbose=0)
 
             fig, ax = plt.subplots(figsize=(6, 6))
-            ax.scatter(np.array(self.y_val)[:, 0], np.array(y_pred)[:, 0])
+            if y_pred.shape[-1] == 1:
+                ax.scatter(np.array(self.y_val)[:, 0], np.array(y_pred)[:, 0])
+            else:
+                ax.errorbar(np.array(self.y_val)[:, 0], np.array(y_pred)[:, 0], yerr=np.array(y_pred)[:, 1])
             ax.plot(np.linspace(0, 1, 100), np.linspace(0, 1, 100), '-k')
             ax.set_xlabel('true label')
             ax.set_ylabel('predicted label')
@@ -380,6 +383,17 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
         np.savez(model_save_filename[:-3] + "___history_fine_tuning.npz", **dict_to_npz_dict(history_fine_tuning.history))
     
     return model
+
+
+class RegressionNLL(tf.keras.losses.Loss):
+    # https://stackoverflow.com/questions/60385762/unable-to-get-good-results-when-trying-to-predict-mean-as-well-as-standard-devia
+    # https://github.com/tensorflow/tensorflow/issues/39702
+    def __init__(self, epsilon=1e-6):
+        super().__init__()
+        self.epsilon = tf.constant(epsilon, dtype=tf.float32)
+
+    def call(self, y_true, y_pred):
+        return 0.5 * K.mean(K.log(y_pred[:, 1] + self.epsilon) + K.square(y_true - y_pred[:, 0]) / (y_pred[:, 1] + self.epsilon))
 
 
 def train_parser():

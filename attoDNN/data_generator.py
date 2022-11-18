@@ -86,13 +86,22 @@ def random_brightness_tf(X, brightness_max_delta=0.2):
     return X
 
 
-def random_detector_saturation_tf(X, saturation_level_min=-0.5, saturation_level_max=1.0):
-    sl = tf.random.uniform(shape=[1], minval=saturation_level_min,
-                           maxval=saturation_level_max, dtype=X.dtype)[0]
+def random_detector_saturation_tf(X, saturation_level_min=-0.5, saturation_level_max=1.0, randomize_over_batch=False):
+    if not randomize_over_batch:
+        sl = tf.random.uniform(shape=[1], minval=saturation_level_min,
+                               maxval=saturation_level_max, dtype=X.dtype)[0]
+        X = tf.clip_by_value(X, clip_value_min=tf.constant(-1., dtype=X.dtype),
+                             clip_value_max=sl)
+        X = X + tf.constant(1., dtype=X.dtype) - sl
 
-    X = tf.clip_by_value(X, clip_value_min=tf.constant(-1., dtype=X.dtype),
-                         clip_value_max=sl)
-    X = X + tf.constant(1., dtype=X.dtype) - sl
+    else:
+        sl = tf.random.uniform(shape=[X.shape[0]], minval=saturation_level_min,
+                               maxval=saturation_level_max, dtype=X.dtype)
+        Y = tf.transpose(X).shape
+        X = tf.transpose(tf.clip_by_value(tf.transpose(X), clip_value_min=tf.constant(-1., dtype=X.dtype, shape=(X.shape[0],)),
+                             clip_value_max=sl))
+        X = tf.transpose(tf.transpose(X) - sl) + tf.constant(1., dtype=X.dtype)
+        YY = X.shape
     return X
 
 

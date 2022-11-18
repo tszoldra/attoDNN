@@ -10,6 +10,8 @@ from attoDNN import nets, train_utils as tu, preprocess as pp, data_generator as
 import datetime
 
 if __name__ == "__main__":
+    # For Bayesian network, one only needs to set a proper model function to
+    # nets.deepCNN_pretrained_bayesian() and loss function to tu.RegressionNLL().
     print(nets.list_GPUs())
 
     # tu.set_memory_growth()
@@ -21,11 +23,11 @@ if __name__ == "__main__":
     dataset_path = args.dataset_path
 
     datasets_extra_validation_paths = [
-        '/net/ascratch/people/plgtszoldra/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Intensity_Sweep_01_cutoff.npz',
-        '/net/ascratch/people/plgtszoldra/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Intensity_Sweep_02_cutoff.npz',
-        '/net/ascratch/people/plgtszoldra/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Intensity_Sweep_03_cutoff.npz',
-        '/net/ascratch/people/plgtszoldra/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Intensity_Sweep_04_cutoff.npz',
-        '/net/ascratch/people/plgtszoldra/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Single_Intensity_01_cutoff.npz',
+        '/home/c8888/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Intensity_Sweep_01_cutoff.npz',
+        '/home/c8888/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Intensity_Sweep_02_cutoff.npz',
+        '/home/c8888/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Intensity_Sweep_03_cutoff.npz',
+        '/home/c8888/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Intensity_Sweep_04_cutoff.npz',
+        '/home/c8888/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Single_Intensity_01_cutoff.npz',
     ]
     ds_extra_val = [AttoDataset(fn) for fn in datasets_extra_validation_paths]
 
@@ -37,7 +39,7 @@ if __name__ == "__main__":
         'threshold': 1e-6,
         'downsample_1': 1,
         'downsample_2': 1,
-        'shape': (224, 224, 1)
+        'shape': (224, 224, 3)
     }
 
     def preprocessor(PDFs):
@@ -89,7 +91,7 @@ if __name__ == "__main__":
     n_models = args.n_models
 
     model_funs = {
-        args.model_name: partial(nets.deepCNN_pretrained,
+        args.model_name: partial(nets.deepCNN_pretrained_bayesian,
                           pretrained_model=getattr(tf.keras.applications, args.model_name) if 'ConvNeXt' not in args.model_name else getattr(tf.keras.applications.convnext, args.model_name),
                           dropout_rate=0.2,
                           weights='imagenet',
@@ -109,14 +111,14 @@ if __name__ == "__main__":
             # PlotLossesKeras(),
             tf.keras.callbacks.TensorBoard(log_dir=tensorboard_path,
                                            #histogram_freq=1,
-                                           profile_batch='50,70',
+                                           #profile_batch='50,70',
                                            write_images=True,
                                            #embeddings_freq=1,
                                            ),
             tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=100),
             tf.keras.callbacks.LearningRateScheduler(tu.lr_scheduler(**lr_scheduler_kwargs)),
-            *[tu.ExtraValidation(*(ds_val.get_Xy()), tensorboard_path + '/extra_validation', ds_val.basename)
-              for ds_val in ds_extra_val],
+            #*[tu.ExtraValidation(*(ds_val.get_Xy()), tensorboard_path + '/extra_validation', ds_val.basename)
+            #  for ds_val in ds_extra_val],
         ]
 
 
@@ -137,7 +139,7 @@ if __name__ == "__main__":
 
 
     def loss():
-        return tf.keras.losses.MeanAbsoluteError()
+        return tu.RegressionNLL()
 
 
     training_kwargs = {
@@ -184,7 +186,7 @@ if __name__ == "__main__":
                 tensorboard_path=training_kwargs['model_save_filename'][:-3] + '__fine_tune')
 
             model = tu.model_compile_train_save(dg_train, dg_val, dg_test,
-                                                model_fun, **training_kwargs)
+                                                         model_fun, **training_kwargs)
             print('GPU USAGE:')
             mem_info = tf.config.experimental.get_memory_info('GPU:0')
             print(f"current mem = {mem_info['current'] / 1073741824} GB")
