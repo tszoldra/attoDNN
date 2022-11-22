@@ -350,7 +350,7 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
         if epochs_fine_tune is None:
             epochs_fine_tune = epochs
         if callbacks_fine_tune is None:
-            cb_fine_tune = cb
+            cb_fine_tune = callbacks()
         else:
             cb_fine_tune = callbacks_fine_tune()
 

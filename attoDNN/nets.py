@@ -63,6 +63,8 @@ def deepCNN_pretrained(input_shape, output_dim=1,
     # x = base_model(x, training=False)  # Important for batchNormalization layer; here not desired.
                                          # see https://keras.io/guides/transfer_learning/
     x = base_model.output  # workaround for innvestigate - model cannot have one complicated layer but many simple layers!
+    # if global_avg_pooling_2d:
+    #     x = keras.layers.GlobalAveragePooling2D()(x)
     x = keras.layers.Dropout(dropout_rate)(x)
     if dense_layers is None:
         outputs = keras.layers.Dense(output_dim, activation='linear')(x)

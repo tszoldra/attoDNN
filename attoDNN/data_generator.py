@@ -98,10 +98,11 @@ def random_detector_saturation_tf(X, saturation_level_min=-0.5, saturation_level
         sl = tf.random.uniform(shape=[X.shape[0]], minval=saturation_level_min,
                                maxval=saturation_level_max, dtype=X.dtype)
         Y = tf.transpose(X).shape
-        X = tf.transpose(tf.clip_by_value(tf.transpose(X), clip_value_min=tf.constant(-1., dtype=X.dtype, shape=(X.shape[0],)),
-                             clip_value_max=sl))
+        X = tf.transpose(tf.clip_by_value(tf.transpose(X),
+                                          clip_value_min=tf.constant(-1., dtype=X.dtype, shape=(X.shape[0],)),
+                                          clip_value_max=sl))
         X = tf.transpose(tf.transpose(X) - sl) + tf.constant(1., dtype=X.dtype)
-        YY = X.shape
+
     return X
 
 

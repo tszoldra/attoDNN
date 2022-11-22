@@ -75,6 +75,43 @@ def preprocess_2(PDFs, threshold=1e-10, downsample_1=1, downsample_2=1, shape=(2
     return np.repeat(np.expand_dims(X_resized, -1), shape[2], axis=-1)
 
 
+def preprocess_2_safe(PDFs, threshold=1e-10, downsample_1=1, downsample_2=1, shape=(299, 299, 3)):
+    """
+    Preprocess PDFs:
+        1. Take every ``downsample_1`` entry across axis 1 and every ``downsample_2`` entry across axis 2.
+        2. Compute the maximal_value_in_datapoint for each PDF in PDFs.
+        3. X = X / maximal_value_in_datapoint. Now, maximal value is 1.
+        4. Everything below ``threshold`` is set to ``threshold``.
+        5. X = np.log10(X)
+        6. X = X + (-np.log10(threshold) / 2)
+        7. X = X / (-np.log10(threshold) / 2)
+        8. Resize to shape (PDFs.shape[0], 299, 299, nchannels) where channels are copied from one channel initially.
+    Does not modify PDFs in-place.
+
+    :param PDFs: Pictures with probability distributions (in the linear scale).
+    :param threshold: Lower bound for the signal in units of the maximal signal.
+    :param downsample_1: Take every ``downsample_1`` entry across axis 1.
+    :param downsample_2: Take every ``downsample_2`` entry across axis 2.
+    :param shape: Shape of the final picture. If more than one color channel, the values are repeated across channels.
+
+    :return: preprocessed PDFs of shape (PDFs.shape[0], *shape).
+    """
+    X = PDFs[:, ::downsample_1, ::downsample_2]
+    X = X / np.max(X, axis=(1, 2)).reshape((-1, 1, 1))
+
+    X[np.where(X < threshold)] = threshold
+
+    # in the comments we use value threshold=1e-6 for illustration
+    X = np.log10(X)  # X in -6...0
+    X += (-np.log10(threshold) / 2)  # X in -3...3
+    X /= (-np.log10(threshold) / 2)  # X in -1...1
+
+    X_resized = np.empty((X.shape[0], *shape[:2]), dtype=X.dtype)
+    for i, img in enumerate(X):
+        X_resized[i] = resize(img, shape[:2])
+    return np.repeat(np.expand_dims(X_resized, -1), shape[2], axis=-1)
+
+
 def remove_region_around_origin(X, removal_size=(0.1, 0.2)):
     idxs1_min = int(X.shape[1] / 2 * (1 - removal_size[0] / 2))
     idxs1_max = int(X.shape[1] / 2 * (1 + removal_size[0] / 2))
