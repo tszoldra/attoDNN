@@ -318,18 +318,22 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
 
     model.compile(optimizer=optimizer(), loss=loss())
 
-    if checkpoint:
-        if not checkpoint_filename:
-            raise ValueError("Need to set checkpoint_filename.")
+    def get_cb(cb_fun):
+        if checkpoint:
+            if not checkpoint_filename:
+                raise ValueError("Need to set checkpoint_filename.")
 
-        cb = callbacks() + [keras.callbacks.ModelCheckpoint(
-                                                        filepath=checkpoint_filename,
-                                                        save_weights_only=True,
-                                                        monitor='val_loss',
-                                                        mode='min',
-                                                        save_best_only=True)]
-    else:
-        cb = callbacks()
+            cb = cb_fun() + [keras.callbacks.ModelCheckpoint(
+                                                            filepath=checkpoint_filename,
+                                                            save_weights_only=True,
+                                                            monitor='val_loss',
+                                                            mode='min',
+                                                            save_best_only=True)]
+        else:
+            cb = cb_fun()
+        return cb
+
+    cb = get_cb(callbacks)
 
     start = time()
 
@@ -350,9 +354,9 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
         if epochs_fine_tune is None:
             epochs_fine_tune = epochs
         if callbacks_fine_tune is None:
-            cb_fine_tune = callbacks()
+            cb_fine_tune = get_cb(callbacks)
         else:
-            cb_fine_tune = callbacks_fine_tune()
+            cb_fine_tune = get_cb(callbacks_fine_tune)
 
         history_fine_tuning = model.fit(dg_train, validation_data=dg_val, epochs=epochs_fine_tune,
                                         callbacks=cb_fine_tune, verbose=2)
