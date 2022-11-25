@@ -10,11 +10,13 @@ def deepCNN_pretrained(input_shape, output_dim=1,
                        pretrained_model=keras.applications.Xception,
                        dropout_rate=0., weights='imagenet',
                        pooling='avg',
-                       dense_layers=None):
+                       dense_layers=None,
+                       BN_trainable=True):
     """
     Model with a pretrained part, pooling, Dropout and dense layers.
 
     Arguments:
+
     :param input_shape: Tuple with ``(image_width, image_height, n_channels)``. If n_channels=1,
         channels are repeated 3 times in the model input.
     :param output_dim: Dimensionality of the output. For prediction of a scalar, set to 1.
@@ -26,7 +28,9 @@ def deepCNN_pretrained(input_shape, output_dim=1,
     :param pooling: pooling applied after the pretrained part. Can be 'avg', 'max' or None.
     :param dense_layers: Either None for a single output layer or list [n1, n2,...] where \
         n1, n2, ... are the dense layers dimensions.
-
+    :param BN_trainable: If during the non-fine-tuning part of the training, the mean and variance in the base_model
+        BatchNormalization layers should be imagenet ones (inference mode - set to False) or from the training data
+        (training mode - set to True).
 
     :returns: (model, base_model) tuple where ``model`` is the whole model and `base_model` is the pretrained part.
         Model needs to be compiled.
@@ -57,21 +61,24 @@ def deepCNN_pretrained(input_shape, output_dim=1,
 
     # un-freeze the BatchNorm layers
     # https://datascience.stackexchange.com/questions/47966/over-fitting-in-transfer-learning-with-small-dataset
-    for layer in base_model.layers:
-        if "BatchNormalization" in layer.__class__.__name__:
-            layer.trainable = True
+    if BN_trainable:
+        for layer in base_model.layers:
+            if "BatchNormalization" in layer.__class__.__name__:
+                layer.trainable = True
     # x = base_model(x, training=False)  # Important for batchNormalization layer; here not desired.
                                          # see https://keras.io/guides/transfer_learning/
     x = base_model.output  # workaround for innvestigate - model cannot have one complicated layer but many simple layers!
     # if global_avg_pooling_2d:
     #     x = keras.layers.GlobalAveragePooling2D()(x)
-    x = keras.layers.Dropout(dropout_rate)(x)
+    # x = keras.layers.Dropout(dropout_rate)(x)
     if dense_layers is None:
-        outputs = keras.layers.Dense(output_dim, activation='linear')(x)
+        outputs = keras.layers.Dropout(dropout_rate)(x)
+        outputs = keras.layers.Dense(output_dim, activation='linear')(outputs)
     else:
         outputs = keras.layers.Dense(dense_layers[0], activation='relu')(x)
         for n in dense_layers[1:]:
             outputs = keras.layers.Dense(n, activation='relu')(outputs)
+        outputs = keras.layers.Dropout(dropout_rate)(outputs)
         outputs = keras.layers.Dense(output_dim, activation='linear')(outputs)
 
     model = keras.models.Model(base_model.input, outputs)
