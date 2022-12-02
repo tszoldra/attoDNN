@@ -167,6 +167,33 @@ def regression_train_test_split_3(X, y, val_size=0.1, test_size=0.1, random_stat
     return X_train, X_val, X_test, y_train, y_val, y_test
 
 
+def regression_train_test_split_4(X, y, val_size=0.1, test_size=0.1, random_state=1234, random_state_validation=1000):
+    """
+    Validation/testing values of y are selected randomly in a correct order unlike in regression_train_test_split_2.
+
+    Arguments:
+    :param X: Values of independent variable eg. pictures.
+    :param y: Labels.
+    :param val_size: Size of the validation dataset as a fraction of the whole dataset.
+    :param test_size: Size of the test dataset as a fraction of the whole dataset.
+    :param random_state: Random seed used for entire dataset to train/test splitting.
+    :param random_state: Random seed used for train dataset to train/validation splitting.
+
+    :returns: (X_train, X_val, X_test, y_train, y_val, y_test)
+
+    """
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y,
+                                                        test_size=test_size,
+                                                        random_state=random_state)
+
+    X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
+                                                    test_size=val_size / (1.0 - test_size),
+                                                    random_state=random_state_validation)
+
+    return X_train, X_val, X_test, y_train, y_val, y_test
+
+
 def lr_scheduler(decay_rate=0.5, decay_step=80):
     """
     Learning rate scheduler. Every ``decay_step`` epochs, the learning rate decreases by a factor of ``decay_rate``.

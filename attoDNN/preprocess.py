@@ -143,6 +143,14 @@ def poisson_noise_for_preprocess_2(X, threshold, max_counts_per_pixel):
     return X
 
 
+def normalize_images(X):
+    means = np.mean(X, axis=(1, 2, 3)).reshape((-1, 1, 1, 1))
+    variances = np.std(X, axis=(1, 2, 3)).reshape((-1, 1, 1, 1))
+    X -= means
+    X /= 2.0 * variances
+    return X
+
+
 def detector_saturation(X, level=0.5):
     X = np.clip(X, -1., level)
     X = X + 1. - level

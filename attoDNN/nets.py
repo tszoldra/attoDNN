@@ -135,11 +135,8 @@ def deepCNN_pretrained_bayesian(input_shape, output_dim=1,
         n1, n2, ... are the dense layers dimensions.
 
 
-    :returns: (train_model, pred_model, base_model, var) tuple.
-    `train_model` predicts the mean (workaround for a NLL cost function on two outputs).
-    `pred_model` predicts the mean and variance (two outputs). This will be saved as .h5 file.
+    :returns: (model, base_model) tuple.
     `base_model` is the pretrained part of the model.
-    `var` has variance as output.
     Models need to be compiled.
     """
     # https://arxiv.org/abs/2204.09308
