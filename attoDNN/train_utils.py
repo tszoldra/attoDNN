@@ -405,7 +405,10 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
 
     end = time()
     
-    model.save(model_save_filename)
+    if isinstance(loss(), RegressionNLL):
+        model.save(model_save_filename, custom_objects={'loss': loss()})
+    else:
+        model.save(model_save_filename)
 
     test_loss = model.evaluate(dg_test, verbose=2)
 
