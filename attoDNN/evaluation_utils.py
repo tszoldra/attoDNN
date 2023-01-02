@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 from .attodataset import AttoDataset
 from typing import List
-from .train_utils import MAE
+from .train_utils import MAE, MAPE, MSE
 import warnings
 from matplotlib import pyplot as plt
 from time import time
@@ -21,7 +21,9 @@ def parse_model_filename(fn):
 
 
 def evaluation_grid(models_filenames: List[str], AttoDatasetsList: List[AttoDataset], batch_size=32,
-                    use_data_generator=False):
+                    use_data_generator=False,
+                    train_test_split=None,
+                    predict_on_training_data=True):
     tf.compat.v1.disable_eager_execution()  # for OOM issues in loops
     warnings.warn('TF: Disabled eager execution for evaluation in loop as a workaround for OOM issues.')
 
@@ -50,18 +52,46 @@ def evaluation_grid(models_filenames: List[str], AttoDatasetsList: List[AttoData
             if dataset.basename not in grid[train_dataset_name][model_name].keys():
                 grid[train_dataset_name][model_name][dataset.basename] = {}
 
-            if dataset.data_generator_test is None or not use_data_generator:
-                X, y_true = dataset.get_Xy()
-                y_pred = model.predict(X, batch_size=batch_size)
-            else:
-                identity_model = tf.keras.Sequential()
-                identity_model.add(tf.keras.layers.Activation('linear'))
-                y_true = identity_model.predict(dataset.data_generator_test, batch_size=batch_size)
-                y_pred = model.predict(dataset.data_generator_test, batch_size=batch_size)
+            def grid_record(y_true, y_pred):
+                return {'y_true': y_true,
+                        'y_pred': y_pred,
+                        'MAE': MAE(y_true, y_pred),
+                        'MAPE': MAPE(y_true, y_pred),
+                        'MSE': MSE(y_true, y_pred),
+                        'RMSE': np.sqrt(MSE(y_true, y_pred))}
 
-            grid[train_dataset_name][model_name][dataset.basename][model_number] = {'y_true': y_true,
-                                                                                    'y_pred': y_pred,
-                                                                                    'MAE': MAE(y_true, y_pred)}
+            if train_test_split is not None and dataset.basename in train_dataset_name:
+                if not use_data_generator:
+                    X, y = dataset.get_Xy()
+                    X_train, X_val, X_test, y_train, y_val, y_test = train_test_split(X, y)
+                    X_train = np.concatenate((X_train, X_val), axis=0)
+                    y_train = np.concatenate((y_train, y_val), axis=0)
+
+                    if predict_on_training_data:
+                        if dataset.basename + '_train' not in grid[train_dataset_name][model_name].keys():
+                            grid[train_dataset_name][model_name][dataset.basename + '_train'] = {}
+
+                        y_train_pred = model.predict(X_train, batch_size=batch_size)
+                        grid[train_dataset_name][model_name][dataset.basename + '_train'][model_number] = grid_record(y_train, y_train_pred)
+
+                    y_test_pred = model.predict(X_test, batch_size=batch_size)
+                    grid[train_dataset_name][model_name][dataset.basename][model_number] = grid_record(y_test, y_test_pred)
+
+                else:
+                    raise NotImplementedError()
+
+            else:
+                if dataset.data_generator_test is None or not use_data_generator:
+                    X, y_true = dataset.get_Xy()
+                    y_pred = model.predict(X, batch_size=batch_size)
+                else:
+                    identity_model = tf.keras.Sequential()
+                    identity_model.add(tf.keras.layers.Activation('linear'))
+                    y_true = identity_model.predict(dataset.data_generator_test, batch_size=batch_size)
+                    y_pred = model.predict(dataset.data_generator_test, batch_size=batch_size)
+
+                grid[train_dataset_name][model_name][dataset.basename][model_number] = grid_record(y_true, y_pred)
+
 
         tf.keras.backend.clear_session()
         tf.compat.v1.reset_default_graph()

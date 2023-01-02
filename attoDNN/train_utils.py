@@ -16,6 +16,14 @@ def MAE(y_true, y_pred):
     return np.mean(np.abs(y_true - y_pred))
 
 
+def MAPE(y_true, y_pred):
+    return 100 * np.mean(np.abs((y_true - y_pred) / (np.abs(y_pred)) + 1e-12))
+
+
+def MSE(y_true, y_pred):
+    return np.mean((y_true - y_pred)**2)
+
+
 def set_memory_growth():
     gpus = tf.config.list_physical_devices('GPU')
     if gpus:
@@ -286,7 +294,7 @@ class ExtraValidation(keras.callbacks.Callback):
             if y_pred.shape[-1] == 1:
                 ax.scatter(np.array(self.y_val)[:, 0], np.array(y_pred)[:, 0])
             else:
-                ax.errorbar(np.array(self.y_val)[:, 0], np.array(y_pred)[:, 0], yerr=np.array(y_pred)[:, 1])
+                ax.errorbar(np.array(self.y_val)[:, 0], np.array(y_pred)[:, 0], yerr=np.sqrt(np.array(y_pred)[:, 1]))
             ax.plot(np.linspace(0, 1, 100), np.linspace(0, 1, 100), '-k')
             ax.set_xlabel('true label')
             ax.set_ylabel('predicted label')
@@ -419,12 +427,12 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
 class RegressionNLL(tf.keras.losses.Loss):
     # https://stackoverflow.com/questions/60385762/unable-to-get-good-results-when-trying-to-predict-mean-as-well-as-standard-devia
     # https://github.com/tensorflow/tensorflow/issues/39702
-    def __init__(self, epsilon=1e-6):
+    def __init__(self, epsilon=1e-8):
         super().__init__()
         self.epsilon = tf.constant(epsilon, dtype=tf.float32)
 
     def call(self, y_true, y_pred):
-        return 0.5 * K.mean(K.log(y_pred[:, 1] + self.epsilon) + K.square(y_true - y_pred[:, 0]) / (y_pred[:, 1] + self.epsilon))
+        return 0.5 * K.mean(K.log(y_pred[:, 1] + self.epsilon) + K.square(y_true[:,0] - y_pred[:, 0]) / (y_pred[:, 1] + self.epsilon))
 
 
 def train_parser():
