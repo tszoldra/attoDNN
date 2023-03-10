@@ -33,6 +33,8 @@ class AttoDataset:
             fd = {'Up': 0, 'N': 1, 'CEP': 2}
         elif 'SFA' in filename_npz:
             fd = {'Ip': 0, 'Up': 1, 'omega': 2, 'N': 3, 'CEP': 4, 'Target': 5}
+        elif 'Experiment' in filename_npz and 'fakeN' in filename_npz:  # workaround to be able to predict N for data that does not have this label
+            fd = {'Up': 0, 'N': 1}
         elif 'Experiment' in filename_npz:
             fd = {'Up': 0}
         else:
