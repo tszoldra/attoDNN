@@ -3,7 +3,7 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-DEFAULT_DEPENDENCIES = ["setuptools", "tensorflow", "scikit-learn",
+DEFAULT_DEPENDENCIES = ["setuptools", "tensorflow", "scikit-learn", "scikit-image",
                         "scipy", "matplotlib", ]
 DEV_DEPENDENCIES = DEFAULT_DEPENDENCIES
 
