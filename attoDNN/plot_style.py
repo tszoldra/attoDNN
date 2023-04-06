@@ -1,7 +1,6 @@
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 
-
 mpl.rcParams.update(mpl.rcParamsDefault)
 mpl.rcParams.update({'xtick.direction': 'in',
                      'ytick.direction': 'in'})

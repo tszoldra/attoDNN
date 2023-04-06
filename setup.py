@@ -3,7 +3,8 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-DEFAULT_DEPENDENCIES = ["setuptools"]
+DEFAULT_DEPENDENCIES = ["setuptools", "tensorflow", "scikit-learn",
+                        "scipy", "matplotlib", ]
 DEV_DEPENDENCIES = DEFAULT_DEPENDENCIES
 
 setuptools.setup(
@@ -11,7 +12,7 @@ setuptools.setup(
     version='0.0.1',
     author="Tomasz Szoldra",
     author_email="t.szoldra@gmail.com",
-    description="attoDNN: toolkit for regression on attosecond pulse data",
+    description="attoDNN: toolkit for regression on femtosecond pulse data",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="",  # TODO URL to documentation

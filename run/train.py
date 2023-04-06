@@ -21,11 +21,11 @@ if __name__ == "__main__":
     dataset_path = args.dataset_path
 
     datasets_extra_validation_paths = [
-        '/net/ascratch/people/plgtszoldra/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Intensity_Sweep_01_cutoff.npz',
-        '/net/ascratch/people/plgtszoldra/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Intensity_Sweep_02_cutoff.npz',
-        '/net/ascratch/people/plgtszoldra/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Intensity_Sweep_03_cutoff.npz',
-        '/net/ascratch/people/plgtszoldra/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Intensity_Sweep_04_cutoff.npz',
-        '/net/ascratch/people/plgtszoldra/attosecond_ML/data_cleaned/cartesian_0/Experiment2_cutoff/Experiment_Argon_Single_Intensity_01_cutoff.npz',
+        '../../public_dataset/data_preprocessed/Experiment/Experiment_Argon_Intensity_Sweep_01_cutoff.npz',
+        '../../public_dataset/data_preprocessed/Experiment//Experiment_Argon_Intensity_Sweep_02_cutoff.npz',
+        '../../public_dataset/data_preprocessed/Experiment//Experiment_Argon_Intensity_Sweep_03_cutoff.npz',
+        '../../public_dataset/data_preprocessed/Experiment//Experiment_Argon_Intensity_Sweep_04_cutoff.npz',
+        '../../public_dataset/data_preprocessed/Experiment//Experiment_Argon_Single_Intensity_01_cutoff.npz',
     ]
     ds_extra_val = [AttoDataset(fn) for fn in datasets_extra_validation_paths]
 
@@ -41,7 +41,7 @@ if __name__ == "__main__":
     }
 
     def preprocessor(PDFs):
-        return pp.preprocess_2(PDFs, **preprocess_kwargs)
+        return pp.preprocess_2(PDFs, **preprocess_kwargs) # see documentation how it preprocesses the data
 
     def preprocessor_validation(PDFs):
         return pp.preprocess_2(PDFs, **preprocess_kwargs)
@@ -51,15 +51,17 @@ if __name__ == "__main__":
     train_test_split_kwargs = {
         'val_size': 0.1,
         'test_size': 0.1,
+        'random_state': 1234,
     }
 
-    train_test_split = partial(tu.regression_train_test_split_2, **train_test_split_kwargs)
+    train_test_split = partial(tu.regression_train_test_split_4, **train_test_split_kwargs)
 
 
     def transform_X_fun(X):
         X = dg.random_detector_saturation_tf(X,
                                              saturation_level_min=args.saturation_level_min,
-                                             saturation_level_max=args.saturation_level_max)
+                                             saturation_level_max=args.saturation_level_max,
+                                             )
         X = dg.random_flip_lrud_tf(X)
         X = dg.random_contrast_tf(X, contrast_min=0.1, contrast_max=1.0)
         X = dg.random_brightness_tf(X, brightness_max_delta=1.0)
@@ -89,7 +91,7 @@ if __name__ == "__main__":
     n_models = args.n_models
 
     model_funs = {
-        args.model_name: partial(nets.deepCNN_pretrained,
+        args.model_name: partial(nets.deepCNN_pretrained_bayesian,
                           pretrained_model=getattr(tf.keras.applications, args.model_name) if 'ConvNeXt' not in args.model_name else getattr(tf.keras.applications.convnext, args.model_name),
                           dropout_rate=0.2,
                           weights='imagenet',
@@ -109,7 +111,7 @@ if __name__ == "__main__":
             # PlotLossesKeras(),
             tf.keras.callbacks.TensorBoard(log_dir=tensorboard_path,
                                            #histogram_freq=1,
-                                           profile_batch='50,70',
+                                           #profile_batch='50,70',
                                            write_images=True,
                                            #embeddings_freq=1,
                                            ),
@@ -133,11 +135,12 @@ if __name__ == "__main__":
 
 
     def kernel_regularizer():
-        return tf.keras.regularizers.L1L2(l1=1e-5, l2=1e-5)
+        #return tf.keras.regularizers.L1L2(l1=1e-7, l2=1e-7)
+        return None
 
 
     def loss():
-        return tf.keras.losses.MeanAbsoluteError()
+        return tu.RegressionNLL()
 
 
     training_kwargs = {
@@ -160,8 +163,6 @@ if __name__ == "__main__":
 
     # ============= END CONFIGURATION ================
 
-    # os.popen(f'cat {__file__} >> {model_save_folder}/{os.path.basename(__file__)}')  # autosave training settings
-
     ds = AttoDataset(dataset_path)
     ds.preprocess(preprocessor, feature)
 
@@ -171,13 +172,13 @@ if __name__ == "__main__":
 
     for model_number in range(args.random_state, args.random_state + n_models):
         X_train, X_val, X_test, y_train, y_val, y_test = train_test_split(*ds.get_Xy(),
-                                                                          random_state=model_number)
+                                                                          random_state_validation=model_number)
         dg_train = data_gen_train(X_train, y_train)
         dg_val = data_gen_val(X_val, y_val)
         dg_test = data_gen_test(X_test, y_test)
 
         for model_name, model_fun in model_funs.items():
-            training_kwargs['model_save_filename'] = f'{model_save_folder}/{ds.basename}__{model_name}__{model_number}.h5'
+            training_kwargs['model_save_filename'] = f'{model_save_folder}/{ds.basename}_SL_{args.saturation_level_min}__Bayesian{model_name}__{model_number}.h5'
             training_kwargs['log_filename'] = model_save_folder + '/logs.txt'
             training_kwargs['callbacks'] = lambda: callbacks(training_kwargs['model_save_filename'][:-3])
             training_kwargs['callbacks_fine_tune'] = lambda: callbacks(

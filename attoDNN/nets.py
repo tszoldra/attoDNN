@@ -2,6 +2,7 @@ from tensorflow import keras
 import tensorflow as tf
 import tensorflow.keras.backend as K
 
+
 def list_GPUs():
     return tf.config.list_physical_devices('GPU')
 
@@ -42,11 +43,11 @@ def deepCNN_pretrained(input_shape, output_dim=1,
 
     if 'EfficientNetB' in str(pretrained_model):
         inputs = tf.keras.layers.Rescaling(scale=127.5, offset=1)(inputs)  # inefficient workaround for
-                                                                   # EfficientNet V1 models
+        # EfficientNet V1 models
     pretrained_model_kwargs = dict(input_tensor=inputs,
-                                  include_top=False,
-                                  weights=weights,
-                                  pooling=pooling)
+                                   include_top=False,
+                                   weights=weights,
+                                   pooling=pooling)
     if ('EfficientNetV2' in str(pretrained_model)) or ('ConvNeXt' in str(pretrained_model)):
         pretrained_model_kwargs['include_preprocessing'] = False
 
@@ -66,7 +67,7 @@ def deepCNN_pretrained(input_shape, output_dim=1,
             if "BatchNormalization" in layer.__class__.__name__:
                 layer.trainable = True
     # x = base_model(x, training=False)  # Important for batchNormalization layer; here not desired.
-                                         # see https://keras.io/guides/transfer_learning/
+    # see https://keras.io/guides/transfer_learning/
     x = base_model.output  # workaround for innvestigate - model cannot have one complicated layer but many simple layers!
     # if global_avg_pooling_2d:
     #     x = keras.layers.GlobalAveragePooling2D()(x)
@@ -84,7 +85,6 @@ def deepCNN_pretrained(input_shape, output_dim=1,
     model = keras.models.Model(base_model.input, outputs)
 
     return model, base_model
-
 
 
 def deepCNN1(input_shape, output_dim):
@@ -112,10 +112,10 @@ def deepCNN1(input_shape, output_dim):
 
 
 def deepCNN_pretrained_bayesian(input_shape, output_dim=1,
-                       pretrained_model=keras.applications.Xception,
-                       dropout_rate=0., weights='imagenet',
-                       pooling='avg',
-                       dense_layers=None):
+                                pretrained_model=keras.applications.Xception,
+                                dropout_rate=0., weights='imagenet',
+                                pooling='avg',
+                                dense_layers=None):
     """
     Model with a pretrained part, pooling, Dropout and dense layers.
     The model has two outputs for the prediction of the mean and variance of the resulting Gaussian
@@ -155,11 +155,11 @@ def deepCNN_pretrained_bayesian(input_shape, output_dim=1,
 
     if 'EfficientNetB' in str(pretrained_model):
         inputs = tf.keras.layers.Rescaling(scale=127.5, offset=1)(inputs)  # inefficient workaround for
-                                                                   # EfficientNet V1 models
+        # EfficientNet V1 models
     pretrained_model_kwargs = dict(input_tensor=inputs,
-                                  include_top=False,
-                                  weights=weights,
-                                  pooling=pooling)
+                                   include_top=False,
+                                   weights=weights,
+                                   pooling=pooling)
     if ('EfficientNetV2' in str(pretrained_model)) or ('ConvNeXt' in str(pretrained_model)):
         pretrained_model_kwargs['include_preprocessing'] = False
 
@@ -178,7 +178,7 @@ def deepCNN_pretrained_bayesian(input_shape, output_dim=1,
         if "BatchNormalization" in layer.__class__.__name__:
             layer.trainable = True
     # x = base_model(x, training=False)  # Important for batchNormalization layer; here not desired.
-                                         # see https://keras.io/guides/transfer_learning/
+    # see https://keras.io/guides/transfer_learning/
     x = base_model.output  # workaround for innvestigate - model cannot have one complicated layer but many simple layers!
     x = keras.layers.Dropout(dropout_rate)(x)
     if dense_layers is None:
@@ -198,4 +198,3 @@ def deepCNN_pretrained_bayesian(input_shape, output_dim=1,
     model = keras.models.Model(base_model.input, mean_var)  # workaround for NLL loss
 
     return model, base_model
-

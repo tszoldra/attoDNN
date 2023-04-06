@@ -31,7 +31,6 @@ def preprocess_1(PDFs, normalize_X_fun=lambda x: x, threshold=1e-10, downsample_
     return np.repeat(np.expand_dims(X, -1), 3, axis=-1)
 
 
-
 def preprocess_2(PDFs, threshold=1e-10, downsample_1=1, downsample_2=1, shape=(299, 299, 3)):
     """
     Preprocess PDFs:
@@ -59,12 +58,13 @@ def preprocess_2(PDFs, threshold=1e-10, downsample_1=1, downsample_2=1, shape=(2
     def flat_for(a, f, batch_size=8192):  # for in-place modification of np.ndarray
         a = a.reshape(-1)
         for i in range(0, a.shape[0], batch_size):
-            a[i:i+batch_size] = f(a[i:i+batch_size])
-    #X[np.where(X < threshold)] = threshold
+            a[i:i + batch_size] = f(a[i:i + batch_size])
+
+    # X[np.where(X < threshold)] = threshold
     np.clip(X, threshold, None, out=X)
     # in the comments we use value threshold=1e-6 for illustration
-    #X = np.log10(X)  # X in -6...0
-    #flat_for(X, np.log10, batch_size=8192)
+    # X = np.log10(X)  # X in -6...0
+    # flat_for(X, np.log10, batch_size=8192)
     np.log10(X, out=X)
     X += (-np.log10(threshold) / 2)  # X in -3...3
     X /= (-np.log10(threshold) / 2)  # X in -1...1

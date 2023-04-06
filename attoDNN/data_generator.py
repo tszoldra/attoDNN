@@ -31,7 +31,7 @@ class DataGenerator_tf(keras.utils.Sequence):
 
     def __len__(self):
         """Denotes the number of batches per epoch"""
-        return int(np.ceil(self.n_samples / self.batch_size))-1
+        return int(np.ceil(self.n_samples / self.batch_size)) - 1
 
     def __getitem__(self, index):
         """Generate one batch of data"""
@@ -120,7 +120,7 @@ def random_background_noise_for_preprocess_1_tf(X, threshold, noise_level=1e-6):
     :return: noised X
     """
     X = tf.math.pow(10., -tf_log10(threshold) * X)
-    X += tf.random.truncated_normal(mean=noise_level, stddev=noise_level/2, shape=X.shape)
+    X += tf.random.truncated_normal(mean=noise_level, stddev=noise_level / 2, shape=X.shape)
 
     X = tf_log10(X)
     X = X / (-tf_log10(threshold))
@@ -140,7 +140,7 @@ def random_background_noise_for_preprocess_2_tf(X, threshold, noise_level=1e-4):
     X = tf.math.pow(tf.constant(10., dtype=X.dtype),
                     tf.constant(0.5, dtype=X.dtype) * tf_log10(threshold) * (
                             tf.constant(1., shape=X.shape, dtype=X.dtype) - X))
-    X += tf.random.truncated_normal(mean=noise_level, stddev=noise_level/2., shape=X.shape, dtype=X.dtype)
+    X += tf.random.truncated_normal(mean=noise_level, stddev=noise_level / 2., shape=X.shape, dtype=X.dtype)
 
     X = tf_log10(X)
     X = X + (-tf_log10(threshold) / tf.constant(2., dtype=X.dtype))
@@ -162,7 +162,7 @@ def random_poisson_noise_for_preprocess_2_tf(X, threshold, max_counts_per_pixel=
     X = tf.math.pow(tf.constant(10., dtype=X.dtype),
                     tf.constant(0.5, dtype=X.dtype) * tf_log10(threshold) * (
                             tf.constant(1., shape=X.shape, dtype=X.dtype) - X))
-    X = (tf.random.poisson([1], X*mcpp, dtype=X.dtype)[0] + tf.constant(1., dtype=X.dtype)) / mcpp
+    X = (tf.random.poisson([1], X * mcpp, dtype=X.dtype)[0] + tf.constant(1., dtype=X.dtype)) / mcpp
     X = tf_log10(X)
     X = X + (-tf_log10(threshold) / tf.constant(2., dtype=X.dtype))
     X = X / (-tf_log10(threshold) / tf.constant(2., dtype=X.dtype))
@@ -197,7 +197,7 @@ class DataGenerator(keras.utils.Sequence):
 
     def __len__(self):
         """Denotes the number of batches per epoch"""
-        return int(np.ceil(self.n_samples / self.batch_size))-1
+        return int(np.ceil(self.n_samples / self.batch_size)) - 1
 
     def __getitem__(self, index):
         """Generate one batch of data"""
@@ -241,7 +241,7 @@ def random_background_noise_for_preprocess_1(X, threshold, noise_level=1e-6):
     :return: noised X
     """
     X = np.power(10., -np.log10(threshold) * X)
-    X += np.random.truncated_normal(mean=noise_level, stddev=noise_level/2, shape=X.shape)
+    X += np.random.truncated_normal(mean=noise_level, stddev=noise_level / 2, shape=X.shape)
 
     X = np.log10(X)
     X = X / (-np.log10(threshold))
@@ -265,5 +265,3 @@ def random_background_noise_for_preprocess_2(X, threshold, noise_level=1e-4):
     X = X / (-np.log10(threshold) / 2.)
 
     return X
-
-

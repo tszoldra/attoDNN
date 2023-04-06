@@ -27,7 +27,6 @@ class AttoDataset:
         self.data_generator_val = None
         self.data_generator_test = None
 
-
     def __feature_dict(self, filename_npz):  # column headers for labels
         if 'QProp' in filename_npz:
             fd = {'Up': 0, 'N': 1, 'CEP': 2}
@@ -42,15 +41,13 @@ class AttoDataset:
 
         return fd
 
-
     def preprocess(self, preprocessor, feature_name, delete_NPZ=False):
         self.X = preprocessor(self.PDFs)
-        self.y = self.labels[:, self.fd[feature_name]:self.fd[feature_name]+1]
+        self.y = self.labels[:, self.fd[feature_name]:self.fd[feature_name] + 1]
         self.preprocessed = True
         if delete_NPZ:
             del self.PDFs, self.labels, self.grid, self.NPZ
         pass
-
 
     def get_Xy(self):
         if self.preprocessed:
@@ -58,14 +55,12 @@ class AttoDataset:
         else:
             raise RuntimeError('You must preprocess the data first.')
 
-
     def get_sample_closest_to(self, y_0):
         if self.preprocessed:
             idx = np.argmin(np.abs(self.y.flatten() - y_0))
             return self.X[idx], self.y[idx], idx
         else:
             raise RuntimeError('You must preprocess the data first.')
-
 
     def set_data_generator_train(self, data_generator: DataGenerator):
         self.data_generator_train = data_generator
@@ -75,6 +70,3 @@ class AttoDataset:
 
     def set_data_generator_test(self, data_generator: DataGenerator):
         self.data_generator_test = data_generator
-
-
-

@@ -21,7 +21,7 @@ def MAPE(y_true, y_pred):
 
 
 def MSE(y_true, y_pred):
-    return np.mean((y_true - y_pred)**2)
+    return np.mean((y_true - y_pred) ** 2)
 
 
 def set_memory_growth():
@@ -30,7 +30,7 @@ def set_memory_growth():
         try:
             # Currently, memory growth needs to be the same across GPUs
             for gpu in gpus:
-              tf.config.experimental.set_memory_growth(gpu, True)
+                tf.config.experimental.set_memory_growth(gpu, True)
             logical_gpus = tf.config.list_logical_devices('GPU')
             print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
         except RuntimeError as e:
@@ -42,8 +42,8 @@ def to_accumulative(orig_optimizer, update_params_frequency, accumulate_sum_or_m
     # https://github.com/keras-team/keras/issues/3556
     if update_params_frequency < 1:
         raise ValueError('update_params_frequency must be >= 1')
-    #print('update_params_frequency: %s' % update_params_frequency)
-    #print('accumulate_sum_or_mean: %s' % accumulate_sum_or_mean)
+    # print('update_params_frequency: %s' % update_params_frequency)
+    # print('accumulate_sum_or_mean: %s' % accumulate_sum_or_mean)
     orig_get_gradients = orig_optimizer.get_gradients
     orig_get_updates = orig_optimizer.get_updates
     accumulated_iterations = K.variable(0, dtype='int64', name='accumulated_iterations')
@@ -59,15 +59,18 @@ def to_accumulative(orig_optimizer, update_params_frequency, accumulate_sum_or_m
         if not accumulate_sum_or_mean:
             new_grads = [g / K.cast(update_params_frequency, K.dtype(g)) for g in new_grads]
         self.updated_grads = [K.update_add(p, g) for p, g in zip(self.accumulate_gradient_accumulators, new_grads)]
+
         def update_function():
             with tf.control_dependencies(orig_get_updates(loss, params)):
-                reset_grads = [K.update(p, K.zeros(K.int_shape(p), dtype=K.dtype(p))) for p in self.accumulate_gradient_accumulators]
+                reset_grads = [K.update(p, K.zeros(K.int_shape(p), dtype=K.dtype(p))) for p in
+                               self.accumulate_gradient_accumulators]
             return tf.group(*(reset_grads + [updates_accumulated_iterations]))
+
         def just_store_function():
             return tf.group(*[updates_accumulated_iterations])
-        
+
         update_switch = K.equal((updates_accumulated_iterations) % update_params_frequency, 0)
-        
+
         with tf.control_dependencies(self.updated_grads):
             self.updates = [K.switch(update_switch, update_function, just_store_function)]
             return self.updates
@@ -156,7 +159,7 @@ def regression_train_test_split_3(X, y, val_size=0.1, test_size=0.1, random_stat
     all_idxs = np.arange(y.shape[0])
 
     L = unique_y.shape[0]
-    cond_test = np.isin(y.flatten(), unique_y[int(L/2 - test_size * L/2):int(L/2 + test_size * L/2)])
+    cond_test = np.isin(y.flatten(), unique_y[int(L / 2 - test_size * L / 2):int(L / 2 + test_size * L / 2)])
     test_idxs = all_idxs[cond_test]
     training_idxs = all_idxs[~cond_test]
 
@@ -196,8 +199,8 @@ def regression_train_test_split_4(X, y, val_size=0.1, test_size=0.1, random_stat
                                                         random_state=random_state)
 
     X_train, X_val, y_train, y_val = train_test_split(X_train, y_train,
-                                                    test_size=val_size / (1.0 - test_size),
-                                                    random_state=random_state_validation)
+                                                      test_size=val_size / (1.0 - test_size),
+                                                      random_state=random_state_validation)
 
     return X_train, X_val, X_test, y_train, y_val, y_test
 
@@ -211,10 +214,12 @@ def lr_scheduler(decay_rate=0.5, decay_step=80):
     :param decay_step: Decay step.
     :returns: function that is the learning rate scheduler
     """
+
     def f(epoch, lr):
         if epoch % decay_step == 0 and epoch:
             return lr * pow(decay_rate, np.floor(epoch / decay_step))
         return lr
+
     return f
 
 
@@ -224,33 +229,6 @@ def dict_to_npz_dict(d):
         d1[key] = np.array(val)
     return d1
 
-
-# class ExtraValidation(keras.callbacks.Callback):
-#     """Log evaluation metrics of an extra validation set. This callback
-#     is useful for model training scenarios where multiple validation sets
-#     are used for evaluation (as Keras by default, provides functionality for
-#     evaluating on a single validation set only).
-#     The evaluation metrics are also logged to TensorBoard.
-#     Adapted from https://github.com/tanzhenyu/image_augmentation/blob/master/image_augmentation/callbacks/extra_eval.py
-#     Args:
-#         validation_data: A (X, y) dataset used to evaluate the
-#             model, essentially an extra validation dataset.
-#         validation_freq: Number of epochs to wait before performing
-#             subsequent evaluations.
-#     """
-#     def __init__(self, X_val, y_val, validation_freq=1):
-#         super(ExtraValidation, self).__init__()
-#
-#         self.X_val = X_val
-#         self.y_val = y_val
-#         self.validation_freq = validation_freq
-#
-#     def on_epoch_end(self, epoch, logs=None):
-#         # evaluate at an interval of `validation_freq` epochs
-#         if (epoch + 1) % self.validation_freq == 0:
-#             # TODO: fix `model.evaluate` memory leak on TPU
-#             # gather the evaluation metrics
-#             scores = self.model.evaluate(self.X_val, self.y_val, verbose=2)
 
 class ExtraValidation(keras.callbacks.Callback):
     """Log evaluation metrics of an extra validation set. This callback
@@ -266,6 +244,7 @@ class ExtraValidation(keras.callbacks.Callback):
         validation_freq: Number of epochs to wait before performing
             subsequent evaluations.
     """
+
     def __init__(self, X_val, y_val, tensorboard_path, id: str, validation_freq=1, plot=True):
         super(ExtraValidation, self).__init__()
 
@@ -305,7 +284,7 @@ class ExtraValidation(keras.callbacks.Callback):
 
             # gather evaluation metrics to TensorBoard
             with self.tensorboard_writer.as_default():
-                #for metric_name, score in zip(metric_names, [scores]):
+                # for metric_name, score in zip(metric_names, [scores]):
                 tf.summary.scalar(metric_names[0] + " extra validation " + self.id, scores, step=epoch)
                 tf.summary.image(f'Correlation plot {self.id}', img, step=epoch)
 
@@ -327,8 +306,6 @@ def plot_to_image(figure):
     return image
 
 
-
-
 def model_compile_train_save(dg_train, dg_val, dg_test,
                              model_fun, epochs, optimizer,
                              loss, callbacks,
@@ -342,7 +319,6 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
                              epochs_fine_tune=None,
                              callbacks_fine_tune=None,
                              ):
-
     model, base_model = model_fun(dg_train.input_dim, dg_train.output_dim)
 
     if kernel_regularizer is not None:
@@ -359,11 +335,11 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
                 raise ValueError("Need to set checkpoint_filename.")
 
             cb = cb_fun() + [keras.callbacks.ModelCheckpoint(
-                                                            filepath=checkpoint_filename,
-                                                            save_weights_only=True,
-                                                            monitor='val_loss',
-                                                            mode='min',
-                                                            save_best_only=True)]
+                filepath=checkpoint_filename,
+                save_weights_only=True,
+                monitor='val_loss',
+                mode='min',
+                save_best_only=True)]
         else:
             cb = cb_fun()
         return cb
@@ -375,10 +351,10 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
     history = model.fit(dg_train, validation_data=dg_val, epochs=epochs, callbacks=cb, verbose=2)
     if checkpoint:
         model.load_weights(checkpoint_filename)
-    
+
     train_loss = history.history['loss'][-1]
     val_loss = history.history['val_loss'][-1]
-    
+
     # fine-tune the pretrained part if it exists
     if base_model and fine_tune:
         if optimizer_fine_tune is None:
@@ -398,13 +374,12 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
 
         if checkpoint:
             model.load_weights(checkpoint_filename)
-        
+
         train_loss = history_fine_tuning.history['loss'][-1]
         val_loss = history_fine_tuning.history['val_loss'][-1]
-        
 
     end = time()
-    
+
     model.save(model_save_filename)
 
     test_loss = model.evaluate(dg_test, verbose=2)
@@ -412,15 +387,15 @@ def model_compile_train_save(dg_train, dg_val, dg_test,
     with open(log_filename, 'a') as logs:
         if os.stat(log_filename).st_size == 0:
             logs.write('filename train_loss val_loss test_loss total_training_time[h]\n')
-        logs.write(os.path.basename(model_save_filename) + f' {train_loss: .4f} {val_loss: .4f} {test_loss: .4f} {(end-start)/3600.: .1f}\n')
+        logs.write(os.path.basename(
+            model_save_filename) + f' {train_loss: .4f} {val_loss: .4f} {test_loss: .4f} {(end - start) / 3600.: .1f}\n')
         logs.flush()
-
-
 
     np.savez(model_save_filename[:-3] + "___history.npz", **dict_to_npz_dict(history.history))
     if base_model and fine_tune:
-        np.savez(model_save_filename[:-3] + "___history_fine_tuning.npz", **dict_to_npz_dict(history_fine_tuning.history))
-    
+        np.savez(model_save_filename[:-3] + "___history_fine_tuning.npz",
+                 **dict_to_npz_dict(history_fine_tuning.history))
+
     return model
 
 
@@ -432,19 +407,21 @@ class RegressionNLL(tf.keras.losses.Loss):
         self.epsilon = tf.constant(epsilon, dtype=tf.float32)
 
     def call(self, y_true, y_pred):
-        return 0.5 * K.mean(K.log(y_pred[:, 1] + self.epsilon) + K.square(y_true[:,0] - y_pred[:, 0]) / (y_pred[:, 1] + self.epsilon))
+        return 0.5 * K.mean(
+            K.log(y_pred[:, 1] + self.epsilon) + K.square(y_true[:, 0] - y_pred[:, 0]) / (y_pred[:, 1] + self.epsilon))
 
 
 class to_bayesian(tf.keras.losses.Loss):
     """Makes it possible to use direct loss function such as MSE for neural network with (mean, variance) 2-dimensional output."""
+
     def __init__(self, loss_func, **kwargs):
         super().__init__(**kwargs)
         self.loss_func = loss_func
 
     def call(self, y_true, y_pred):
-        return self.loss_func(y_true, y_pred[:,0:1])
-    
-    
+        return self.loss_func(y_true, y_pred[:, 0:1])
+
+
 def train_parser():
     parser = argparse.ArgumentParser(description='Train a model on dataset with given hyperparameters')
     myargs = [
@@ -464,8 +441,9 @@ def train_parser():
     for argname, argtype, arghelp, argdefault in myargs:
         parser.add_argument(argname, type=argtype, help=arghelp, default=argdefault)
 
-    parser.add_argument('--dense_layers', type=int, help='List of sizes of dense layers applied at the end of the network. If not given,'
-                                 ' a single layer with linear activation is applied.',
+    parser.add_argument('--dense_layers', type=int,
+                        help='List of sizes of dense layers applied at the end of the network. If not given,'
+                             ' a single layer with linear activation is applied.',
                         default=None,
                         nargs='+')
     parser.add_argument('--tensorboard_path', type=str, help='Path to save tensorboard logs.',
