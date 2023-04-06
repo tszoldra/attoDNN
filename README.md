@@ -11,7 +11,7 @@ in this work include VGG16, Xception, EfficientNetB7, EfficientNetV2L.
 
 Each model predicts both the value of the pulse parameter of interest, and the uncertainty (mean-variance estimator).
 
-###This software is accompanied by datasets with photoelectron momentum distributions from QProp, Strong Field Approximation and Experiments and are available in our *[OpenData catalog](https://chaos.if.uj.edu.pl/ZOA/index.php?which=opendata&dataset=/2303.13940)*.
+### This software is accompanied by datasets with photoelectron momentum distributions from QProp, Strong Field Approximation and Experiments and are available in our *[OpenData catalog](https://chaos.if.uj.edu.pl/ZOA/index.php?which=opendata&dataset=/2303.13940)*.
 
 ### Notebooks:
 - *[Dataset and explanations readout](https://github.com/tszoldra/attoDNN/blob/master/notebooks/01_dataset_readout.ipynb)* [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://githubtocolab.com/tszoldra/attoDNN/blob/master/notebooks/01_dataset_readout.ipynb)
