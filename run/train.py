@@ -21,11 +21,7 @@ if __name__ == "__main__":
     dataset_path = args.dataset_path
 
     datasets_extra_validation_paths = [
-        '../../public_dataset/data_preprocessed/Experiment/Experiment_Argon_Intensity_Sweep_01_cutoff.npz',
-        '../../public_dataset/data_preprocessed/Experiment//Experiment_Argon_Intensity_Sweep_02_cutoff.npz',
-        '../../public_dataset/data_preprocessed/Experiment//Experiment_Argon_Intensity_Sweep_03_cutoff.npz',
-        '../../public_dataset/data_preprocessed/Experiment//Experiment_Argon_Intensity_Sweep_04_cutoff.npz',
-        '../../public_dataset/data_preprocessed/Experiment//Experiment_Argon_Single_Intensity_01_cutoff.npz',
+        'Experiment_Argon_Intensity_Sweep_04_cutoff.npz',
     ]
     ds_extra_val = [AttoDataset(fn) for fn in datasets_extra_validation_paths]
 
@@ -51,7 +47,7 @@ if __name__ == "__main__":
     train_test_split_kwargs = {
         'val_size': 0.1,
         'test_size': 0.1,
-        'random_state': 1234,
+        'random_state': 1234, #is always the same for train/test splitting
     }
 
     train_test_split = partial(tu.regression_train_test_split_4, **train_test_split_kwargs)
